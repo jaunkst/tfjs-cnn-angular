@@ -1,0 +1,28 @@
+{
+  "npmScope": "sedge",
+  "implicitDependencies": {
+    "angular.json": "*",
+    "package.json": {
+      "dependencies": "*",
+      "devDependencies": "*"
+    },
+    "tsconfig.json": "*",
+    "tslint.json": "*",
+    "nx.json": "*"
+  },
+  "projects": {
+    "sedge": {
+      "tags": []
+    },
+    "sedge-e2e": {
+      "tags": [],
+      "implicitDependencies": ["sedge"]
+    },
+    "api": {
+      "tags": []
+    },
+    "api-interfaces": {
+      "tags": []
+    }
+  }
+}
