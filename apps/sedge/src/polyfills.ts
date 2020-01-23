@@ -55,6 +55,10 @@
 /***************************************************************************************************
  * Zone JS is required by default for Angular itself.
  */
+
+import * as Jimp from 'jimp';
+window['Jimp'] = Jimp;
+
 import 'zone.js/dist/zone'; // Included with Angular CLI.
 
 /***************************************************************************************************

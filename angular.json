@@ -13,7 +13,7 @@
       "prefix": "sedge",
       "architect": {
         "build": {
-          "builder": "@angular-devkit/build-angular:browser",
+          "builder": "ngx-build-plus:browser",
           "options": {
             "outputPath": "dist/apps/sedge",
             "index": "apps/sedge/src/index.html",
@@ -21,8 +21,13 @@
             "polyfills": "apps/sedge/src/polyfills.ts",
             "tsConfig": "apps/sedge/tsconfig.app.json",
             "aot": false,
-            "assets": ["apps/sedge/src/favicon.ico", "apps/sedge/src/assets"],
-            "styles": ["apps/sedge/src/styles.scss"],
+            "assets": [
+              "apps/sedge/src/favicon.ico",
+              "apps/sedge/src/assets"
+            ],
+            "styles": [
+              "apps/sedge/src/styles.scss"
+            ],
             "scripts": []
           },
           "configurations": {
@@ -58,7 +63,7 @@
           }
         },
         "serve": {
-          "builder": "@angular-devkit/build-angular:dev-server",
+          "builder": "ngx-build-plus:dev-server",
           "options": {
             "browserTarget": "sedge:build",
             "proxyConfig": "apps/sedge/proxy.conf.json"
@@ -82,11 +87,14 @@
               "apps/sedge/tsconfig.app.json",
               "apps/sedge/tsconfig.spec.json"
             ],
-            "exclude": ["**/node_modules/**", "!apps/sedge/**"]
+            "exclude": [
+              "**/node_modules/**",
+              "!apps/sedge/**"
+            ]
           }
         },
         "test": {
-          "builder": "@nrwl/jest:jest",
+          "builder": "ngx-build-plus:karma",
           "options": {
             "jestConfig": "apps/sedge/jest.config.js",
             "tsConfig": "apps/sedge/tsconfig.spec.json",
@@ -116,8 +124,13 @@
         "lint": {
           "builder": "@angular-devkit/build-angular:tslint",
           "options": {
-            "tsConfig": ["apps/sedge-e2e/tsconfig.e2e.json"],
-            "exclude": ["**/node_modules/**", "!apps/sedge-e2e/**"]
+            "tsConfig": [
+              "apps/sedge-e2e/tsconfig.e2e.json"
+            ],
+            "exclude": [
+              "**/node_modules/**",
+              "!apps/sedge-e2e/**"
+            ]
           }
         }
       }
@@ -135,7 +148,9 @@
             "outputPath": "dist/apps/api",
             "main": "apps/api/src/main.ts",
             "tsConfig": "apps/api/tsconfig.app.json",
-            "assets": ["apps/api/src/assets"]
+            "assets": [
+              "apps/api/src/assets"
+            ]
           },
           "configurations": {
             "production": {
@@ -164,7 +179,10 @@
               "apps/api/tsconfig.app.json",
               "apps/api/tsconfig.spec.json"
             ],
-            "exclude": ["**/node_modules/**", "!apps/api/**"]
+            "exclude": [
+              "**/node_modules/**",
+              "!apps/api/**"
+            ]
           }
         },
         "test": {
@@ -189,7 +207,10 @@
               "libs/api-interfaces/tsconfig.lib.json",
               "libs/api-interfaces/tsconfig.spec.json"
             ],
-            "exclude": ["**/node_modules/**", "!libs/api-interfaces/**"]
+            "exclude": [
+              "**/node_modules/**",
+              "!libs/api-interfaces/**"
+            ]
           }
         },
         "test": {
@@ -203,7 +224,8 @@
     }
   },
   "cli": {
-    "defaultCollection": "@nrwl/angular"
+    "defaultCollection": "@nrwl/angular",
+    "packageManager": "yarn"
   },
   "schematics": {
     "@nrwl/angular:application": {
