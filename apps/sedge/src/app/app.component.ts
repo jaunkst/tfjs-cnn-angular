@@ -3,24 +3,37 @@ import {
   OnInit,
   AfterViewInit,
   ViewChild,
-  ElementRef
+  ElementRef,
+  ChangeDetectorRef
 } from '@angular/core';
 import * as tf from '@tensorflow/tfjs';
-import * as tfvis from '@tensorflow/tfjs-vis';
-import * as Jimp from 'jimp';
+// tf.enableDebugMode();
 
-import { from, of, combineLatest } from 'rxjs';
+import * as tfvis from '@tensorflow/tfjs-vis';
+import { ImageProcessorService } from '@sedge/frontend/common';
+
+import {
+  from,
+  of,
+  combineLatest,
+  forkJoin,
+  Observable,
+  BehaviorSubject
+} from 'rxjs';
 import {
   map as rxMap,
   tap as rxTap,
   startWith as rxStartWith,
-  take as rxTake
+  take as rxTake,
+  flatMap as rxFlatMap,
+  filter as rxFilter
 } from 'rxjs/operators';
-import { prop } from 'ramda';
-import { FormGroup, FormControl } from '@angular/forms';
+import { prop, map, forEach, addIndex, complement, isNil } from 'ramda';
+import { FormGroup, FormControl, Validators } from '@angular/forms';
+import { Tensor } from '@tensorflow/tfjs';
 
-const TARGET_SHAPE_WIDTH = 250;
-const TARGET_SHAPE_HEIGHT = 250;
+const TARGET_SHAPE_WIDTH = 64;
+const TARGET_SHAPE_HEIGHT = 64;
 const TARGET_SHAPE_CHANNELS = 3;
 const TARGET_SHAPE = [
   TARGET_SHAPE_WIDTH,
@@ -28,6 +41,15 @@ const TARGET_SHAPE = [
   TARGET_SHAPE_CHANNELS
 ];
 const NUM_OUTPUT_CLASSES = 3;
+
+const BATCH_SIZE = 64;
+const TEST_BATCH_SIZE = 1000;
+const TEST_ITERATION_FREQUENCY = 5;
+
+const container = {
+  name: 'Model Training',
+  styles: { height: '1000px' }
+};
 
 @Component({
   selector: 'sedge-root',
@@ -38,103 +60,98 @@ export class AppComponent implements AfterViewInit {
   @ViewChild('canvas', { static: true })
   public canvas: ElementRef<HTMLCanvasElement>;
 
+  public prediction$ = new BehaviorSubject('upload a png...');
+
   public inputForm = new FormGroup({
-    inputValue: new FormControl(0)
+    image: new FormControl(null, [Validators.required])
   });
 
-  public prediction$ = combineLatest([
-    this.getModelObs().pipe(rxMap(model => {})),
-    this.inputForm.valueChanges.pipe(rxMap(prop('inputValue')))
-  ]).pipe(
-    rxMap(([model, inputValue]: [any, number]) => {
-      return inputValue;
+  public testImageBlobUrl$ = new BehaviorSubject(null);
+  public testImageTensors$ = this.testImageBlobUrl$.pipe(
+    rxFilter(complement(isNil)),
+    rxFlatMap((blobUrl: string) => {
+      return this.imageProcessorService.read(blobUrl).pipe(
+        rxFlatMap((image: any) => {
+          return image
+            .normalize()
+            .resize(TARGET_SHAPE_WIDTH, TARGET_SHAPE_HEIGHT)
+            .getImageDataAsObservable(
+              'image/png',
+              TARGET_SHAPE_WIDTH,
+              TARGET_SHAPE_HEIGHT
+            );
+        }),
+        rxMap((imageData: ImageData) => {
+          return tf.stack([
+            tf.browser.fromPixels(imageData, TARGET_SHAPE_CHANNELS)
+          ]);
+        })
+      );
     })
   );
 
-  // this.inputForm.valueChanges.pipe(
-  //   rxMap(prop('inputValue')),
-  //   rxMap((inputValue: number) => {
-  //     const output = this.linearModel.predict(
-  //       tf.tensor2d([inputValue], [1, 1])
-  //     ) as any;
-  //     return Array.from(output.dataSync())[0];
-  //   })
-  // );
+  constructor(public imageProcessorService: ImageProcessorService) {}
 
-  constructor() {}
-
-  ngAfterViewInit() {
-    // this.photoAPI$.subscribe((photon: any) => {
-    // console.log(window['Jimp']);
-
-    // Jimp.read('https://i.picsum.photos/id/52/200/300.jpg', (err, lenna) => {
-    //   if (err) throw err;
-    //   lenna
-    //     .resize(256, 256) // resize
-    //     .quality(60) // set JPEG quality
-    //     .greyscale() // set greyscale
-    //     .getBase64(); // save
-    // });
-
-    Jimp.read('https://i.picsum.photos/id/52/200/300.jpg')
-      .then(image => {
-        const ctx = this.canvas.nativeElement.getContext('2d');
-        image
-          .resize(64, 64)
-          .grayscale()
-          .getBase64Async('image/jpeg')
-          .then(base64 => {
-            // console.log(base64);
-            const img = new Image();
-            img.onload = function() {
-              console.log('onload');
-              ctx.drawImage(img, 0, 0);
-            };
-            img.src = base64;
-            // image.l
-            // console.log({ buffer });
-            // ctx.drawImage(img, 50, 50);
-            // image.src =
-            //   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAOEAAADhCAMAAAAJbSJIAAAAA1BMVEXtGySTdVFiAAAASElEQVR4nO3BgQAAAADDoPlTX+AIVQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADwDcaiAAFXD1ujAAAAAElFTkSuQmCC';
-          });
-
-        // ctx.drawImage(image, 0, 0);
-        // ctx.beginPath();
-        // ctx.rect(20, 20, 150, 100);
-        // ctx.fillStyle = 'red';
-        // ctx.fill();
-
-        // Do stuff with the image.
-      })
-      .catch(err => {
-        // Handle an exception.
-      });
-
-    // Create a canvas and get a 2D context from the canvas
-    // var canvas = document.getElementById('canvas') as any;
-
-    // Module has now been imported.
-    // All image processing logic w/ Photon goes here.
-    // See sample code below.
-    // });
+  private getLabelTensorsObservable(labels: number[]) {
+    return of(tf.oneHot(tf.tensor1d(labels, 'int32'), NUM_OUTPUT_CLASSES));
   }
 
-  public getModelObs() {
-    const model = tf.sequential();
+  private getImageTensorsObservable(imageUrls: string[] = []) {
+    return forkJoin(map(this.imageProcessorService.read, imageUrls)).pipe(
+      rxFlatMap(images => {
+        return forkJoin(
+          map((image: any) => {
+            return image
+              .normalize()
+              .resize(TARGET_SHAPE_WIDTH, TARGET_SHAPE_HEIGHT)
+              .getImageDataAsObservable(
+                'image/png',
+                TARGET_SHAPE_WIDTH,
+                TARGET_SHAPE_HEIGHT
+              );
+          }, images)
+        );
+      }),
+      rxMap((imageDatas: ImageData[]) => {
+        return map(imageData => {
+          return tf.browser.fromPixels(
+            imageData,
+            TARGET_SHAPE_CHANNELS
+          ) as Tensor;
+        }, imageDatas);
+      })
+    );
+  }
 
+  private getCNNModelObservable() {
+    const model = tf.sequential();
+    // First layer
     model.add(
       tf.layers.conv2d({
         inputShape: TARGET_SHAPE,
-        kernelSize: 3,
-        filters: 16,
+        kernelSize: 5,
+        filters: 8,
+        strides: 1,
         activation: 'relu',
         kernelInitializer: 'varianceScaling'
       })
     );
     model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [2, 2] }));
 
-    model.add(tf.layers.flatten());
+    // Second layer
+    model.add(
+      tf.layers.conv2d({
+        kernelSize: 5,
+        filters: 16,
+        strides: 1,
+        activation: 'relu',
+        kernelInitializer: 'varianceScaling'
+      })
+    );
+    model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [2, 2] }));
 
+    // Output layer
+    model.add(tf.layers.flatten());
     model.add(
       tf.layers.dense({
         units: NUM_OUTPUT_CLASSES,
@@ -143,20 +160,105 @@ export class AppComponent implements AfterViewInit {
       })
     );
 
+    // Compile Model
+    model.compile({
+      optimizer: tf.train.adam(0.4),
+      loss: 'categoricalCrossentropy',
+      metrics: ['accuracy']
+    });
+    // tfvis.show.modelSummary(container, model);
+
     return of(model);
   }
 
-  // public train() {
-  //   this.linearModel.add(tf.layers.dense({ units: 1, inputShape: [1] }));
-  //   this.linearModel.compile({ loss: 'meanSquaredError', optimizer: 'sgd' });
+  private getTrainedModelObservable() {
+    return forkJoin([
+      this.getCNNModelObservable(),
+      this.getImageTensorsObservable([
+        'http://localhost:4200/api/atlas/yellow-sample.png',
+        'http://localhost:4200/api/atlas/red-sample.png',
+        'http://localhost:4200/api/atlas/green-sample.png'
+      ]),
+      this.getLabelTensorsObservable([0, 1, 2])
+    ]).pipe(
+      rxFlatMap(([model, imageTensors, labelTensors]) => {
+        console.log('TFJS:', tf.getBackend());
+        const tensorFeatures = tf.stack(imageTensors);
 
-  //   // Training data, completely random stuff
-  //   const xs = tf.tensor1d([3.2, 4.4, 5.5]);
-  //   const ys = tf.tensor1d([1.6, 2.7, 3.5]);
+        const metrics = ['loss', 'val_loss', 'acc', 'val_acc'];
 
-  //   console.log('model trained!');
+        const fitCallbacks = tfvis.show.fitCallbacks(container, metrics);
 
-  //   // Train
-  //   return from(this.linearModel.fit(xs, ys));
-  // }
+        return new Observable<tf.LayersModel>(sub => {
+          model
+            .fit(tensorFeatures, labelTensors, {
+              batchSize: BATCH_SIZE,
+              validationData: [tensorFeatures, labelTensors],
+              epochs: 2,
+              shuffle: true,
+              callbacks: fitCallbacks
+            })
+            .then((history: tf.History) => {
+              sub.next(model);
+              sub.complete();
+            });
+        });
+
+        // const surface = { name: 'show.history', tab: 'Training' };
+        // // Train for 5 epochs with batch size of 32.
+        // const history = await model.fit(data, labels, {
+        //   epochs: 5,
+        //   batchSize: 32
+        // });
+      })
+    );
+  }
+
+  onFileChange(event: any) {
+    if (event.target.files && event.target.files.length) {
+      const [file] = event.target.files;
+      this.testImageBlobUrl$.next(URL.createObjectURL(file));
+    }
+  }
+
+  ngAfterViewInit() {
+    combineLatest([this.testImageTensors$, this.getTrainedModelObservable()])
+      .pipe(
+        rxFlatMap(([testImageTensors, model]) => {
+          const results = model.predict(testImageTensors) as Tensor;
+          tfvis.show.valuesDistribution(container, results);
+          return from(results.data());
+        })
+      )
+      .subscribe(prediction => {
+        console.log({ prediction });
+
+        // const labels = tf.tensor1d([0, 1, 2]);
+        // const predictions = tf.tensor1d(prediction);
+        // tfvis.metrics.confusionMatrix(labels, predictions).then(result => {
+        //   console.log(JSON.stringify(result, null, 2));
+        // });
+
+        const labelValues = ['yellow', 'red', 'green'];
+        this.prediction$.next(labelValues[this.indexOfMax(prediction)]);
+      });
+  }
+
+  private indexOfMax(arr) {
+    if (arr.length === 0) {
+      return -1;
+    }
+
+    let max = arr[0];
+    let maxIndex = 0;
+
+    for (let i = 1; i < arr.length; i++) {
+      if (arr[i] > max) {
+        maxIndex = i;
+        max = arr[i];
+      }
+    }
+
+    return maxIndex;
+  }
 }

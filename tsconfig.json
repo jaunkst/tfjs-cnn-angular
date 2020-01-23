@@ -14,9 +14,11 @@
     "lib": ["es2017", "dom"],
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
+    "allowJs": true,
     "baseUrl": ".",
     "paths": {
-      "@sedge/api-interfaces": ["libs/api-interfaces/src/index.ts"]
+      "@sedge/api-interfaces": ["libs/api-interfaces/src/index.ts"],
+      "@sedge/frontend/common": ["libs/frontend/common/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

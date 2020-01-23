@@ -1,12 +1,14 @@
 <div>
-  <canvas #canvas width="600" height="300"></canvas>
-
   <div>TensorFlow says {{ prediction$ | async }}</div>
 
   <form [formGroup]="inputForm">
     <label>
       Input Value:
-      <input type="number" formControlName="inputValue" />
+      <input
+        type="file"
+        formControlName="image"
+        (change)="onFileChange($event)"
+      />
     </label>
   </form>
 </div>

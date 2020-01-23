@@ -23,6 +23,9 @@
     },
     "api-interfaces": {
       "tags": []
+    },
+    "frontend-common": {
+      "tags": []
     }
   }
 }

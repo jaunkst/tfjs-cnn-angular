@@ -21,13 +21,8 @@
             "polyfills": "apps/sedge/src/polyfills.ts",
             "tsConfig": "apps/sedge/tsconfig.app.json",
             "aot": false,
-            "assets": [
-              "apps/sedge/src/favicon.ico",
-              "apps/sedge/src/assets"
-            ],
-            "styles": [
-              "apps/sedge/src/styles.scss"
-            ],
+            "assets": ["apps/sedge/src/favicon.ico", "apps/sedge/src/assets"],
+            "styles": ["apps/sedge/src/styles.scss"],
             "scripts": []
           },
           "configurations": {
@@ -87,10 +82,7 @@
               "apps/sedge/tsconfig.app.json",
               "apps/sedge/tsconfig.spec.json"
             ],
-            "exclude": [
-              "**/node_modules/**",
-              "!apps/sedge/**"
-            ]
+            "exclude": ["**/node_modules/**", "!apps/sedge/**"]
           }
         },
         "test": {
@@ -124,13 +116,8 @@
         "lint": {
           "builder": "@angular-devkit/build-angular:tslint",
           "options": {
-            "tsConfig": [
-              "apps/sedge-e2e/tsconfig.e2e.json"
-            ],
-            "exclude": [
-              "**/node_modules/**",
-              "!apps/sedge-e2e/**"
-            ]
+            "tsConfig": ["apps/sedge-e2e/tsconfig.e2e.json"],
+            "exclude": ["**/node_modules/**", "!apps/sedge-e2e/**"]
           }
         }
       }
@@ -148,9 +135,7 @@
             "outputPath": "dist/apps/api",
             "main": "apps/api/src/main.ts",
             "tsConfig": "apps/api/tsconfig.app.json",
-            "assets": [
-              "apps/api/src/assets"
-            ]
+            "assets": ["apps/api/src/assets"]
           },
           "configurations": {
             "production": {
@@ -179,10 +164,7 @@
               "apps/api/tsconfig.app.json",
               "apps/api/tsconfig.spec.json"
             ],
-            "exclude": [
-              "**/node_modules/**",
-              "!apps/api/**"
-            ]
+            "exclude": ["**/node_modules/**", "!apps/api/**"]
           }
         },
         "test": {
@@ -207,10 +189,7 @@
               "libs/api-interfaces/tsconfig.lib.json",
               "libs/api-interfaces/tsconfig.spec.json"
             ],
-            "exclude": [
-              "**/node_modules/**",
-              "!libs/api-interfaces/**"
-            ]
+            "exclude": ["**/node_modules/**", "!libs/api-interfaces/**"]
           }
         },
         "test": {
@@ -219,6 +198,37 @@
             "jestConfig": "libs/api-interfaces/jest.config.js",
             "tsConfig": "libs/api-interfaces/tsconfig.spec.json"
           }
+        }
+      }
+    },
+    "frontend-common": {
+      "projectType": "library",
+      "root": "libs/frontend/common",
+      "sourceRoot": "libs/frontend/common/src",
+      "prefix": "sedge",
+      "architect": {
+        "lint": {
+          "builder": "@angular-devkit/build-angular:tslint",
+          "options": {
+            "tsConfig": [
+              "libs/frontend/common/tsconfig.lib.json",
+              "libs/frontend/common/tsconfig.spec.json"
+            ],
+            "exclude": ["**/node_modules/**", "!libs/frontend/common/**"]
+          }
+        },
+        "test": {
+          "builder": "@nrwl/jest:jest",
+          "options": {
+            "jestConfig": "libs/frontend/common/jest.config.js",
+            "tsConfig": "libs/frontend/common/tsconfig.spec.json",
+            "setupFile": "libs/frontend/common/src/test-setup.ts"
+          }
+        }
+      },
+      "schematics": {
+        "@nrwl/angular:component": {
+          "styleext": "scss"
         }
       }
     }
