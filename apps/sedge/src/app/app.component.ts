@@ -1,13 +1,5 @@
-import {
-  Component,
-  OnInit,
-  AfterViewInit,
-  ViewChild,
-  ElementRef,
-  ChangeDetectorRef
-} from '@angular/core';
+import { Component, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
 import * as tf from '@tensorflow/tfjs';
-// tf.enableDebugMode();
 
 import * as tfvis from '@tensorflow/tfjs-vis';
 import { ImageProcessorService } from '@sedge/frontend/common';
@@ -28,7 +20,7 @@ import {
   flatMap as rxFlatMap,
   filter as rxFilter
 } from 'rxjs/operators';
-import { prop, map, forEach, addIndex, complement, isNil } from 'ramda';
+import { map, complement, isNil } from 'ramda';
 import { FormGroup, FormControl, Validators } from '@angular/forms';
 import { Tensor } from '@tensorflow/tfjs';
 
@@ -203,13 +195,6 @@ export class AppComponent implements AfterViewInit {
               sub.complete();
             });
         });
-
-        // const surface = { name: 'show.history', tab: 'Training' };
-        // // Train for 5 epochs with batch size of 32.
-        // const history = await model.fit(data, labels, {
-        //   epochs: 5,
-        //   batchSize: 32
-        // });
       })
     );
   }
