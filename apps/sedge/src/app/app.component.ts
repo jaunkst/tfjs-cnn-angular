@@ -1,8 +1,8 @@
-import { Component, AfterViewInit, ViewChild, ElementRef } from "@angular/core";
-import * as tf from "@tensorflow/tfjs";
+import { Component, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
+import * as tf from '@tensorflow/tfjs';
 
-import * as tfvis from "@tensorflow/tfjs-vis";
-import { ImageProcessorService, RxJimp } from "@sedge/frontend/common";
+import * as tfvis from '@tensorflow/tfjs-vis';
+import { ImageProcessorService, RxJimp } from '@sedge/frontend/common';
 
 import {
   from,
@@ -11,7 +11,7 @@ import {
   forkJoin,
   Observable,
   BehaviorSubject
-} from "rxjs";
+} from 'rxjs';
 import {
   map as rxMap,
   tap as rxTap,
@@ -20,10 +20,10 @@ import {
   flatMap as rxFlatMap,
   filter as rxFilter,
   shareReplay as rxShareReplay
-} from "rxjs/operators";
-import { map, complement, isNil, concat, reduce, max } from "ramda";
-import { FormGroup, FormControl, Validators } from "@angular/forms";
-import { Tensor } from "@tensorflow/tfjs";
+} from 'rxjs/operators';
+import { map, complement, isNil, concat, reduce, max } from 'ramda';
+import { FormGroup, FormControl, Validators } from '@angular/forms';
+import { Tensor } from '@tensorflow/tfjs';
 
 const TARGET_SHAPE_WIDTH = 64;
 const TARGET_SHAPE_HEIGHT = 64;
@@ -33,7 +33,7 @@ const TARGET_SHAPE = [
   TARGET_SHAPE_HEIGHT,
   TARGET_SHAPE_CHANNELS
 ];
-const ORDERED_LABEL_CLASSES = ["yellow", "red", "green"];
+const ORDERED_LABEL_CLASSES = ['yellow', 'red', 'green'];
 const NUM_OUTPUT_CLASSES = ORDERED_LABEL_CLASSES.length;
 
 const BATCH_SIZE = 100;
@@ -41,20 +41,20 @@ const TEST_BATCH_SIZE = 1000;
 const TEST_ITERATION_FREQUENCY = 5;
 
 const container = {
-  name: "Model Training",
-  styles: { height: "1000px" }
+  name: 'Model Training',
+  styles: { height: '1000px' }
 };
 
 @Component({
-  selector: "sedge-root",
-  templateUrl: "./app.component.html",
-  styleUrls: ["./app.component.scss"]
+  selector: 'sedge-root',
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.scss']
 })
 export class AppComponent implements AfterViewInit {
-  @ViewChild("canvas", { static: true })
+  @ViewChild('canvas', { static: true })
   public canvas: ElementRef<HTMLCanvasElement>;
 
-  public prediction$ = new BehaviorSubject("upload a png...");
+  public prediction$ = new BehaviorSubject('upload a png...');
 
   public inputForm = new FormGroup({
     image: new FormControl(null, [Validators.required])
@@ -62,20 +62,20 @@ export class AppComponent implements AfterViewInit {
 
   public instantValidationImages$ = new BehaviorSubject([
     {
-      src: "http://localhost:4200/api/atlas/yellow-sample.png",
-      predictedLabel: "",
+      src: 'http://localhost:4200/api/atlas/yellow-sample.png',
+      predictedLabel: '',
       expectedLabelIndex: 0,
       confidence: 0
     },
     {
-      src: "http://localhost:4200/api/atlas/red-sample.png",
-      predictedLabel: "",
+      src: 'http://localhost:4200/api/atlas/red-sample.png',
+      predictedLabel: '',
       expectedLabelIndex: 1,
       confidence: 0
     },
     {
-      src: "http://localhost:4200/api/atlas/green-sample.png",
-      predictedLabel: "",
+      src: 'http://localhost:4200/api/atlas/green-sample.png',
+      predictedLabel: '',
       expectedLabelIndex: 2,
       confidence: 0
     }
@@ -101,7 +101,7 @@ export class AppComponent implements AfterViewInit {
         return image
           .resize(TARGET_SHAPE_WIDTH, TARGET_SHAPE_HEIGHT)
           .getImageDataAsObservable(
-            "image/png",
+            'image/png',
             TARGET_SHAPE_WIDTH,
             TARGET_SHAPE_HEIGHT
           );
@@ -115,7 +115,7 @@ export class AppComponent implements AfterViewInit {
   }
 
   private getLabelTensorsObservable(labels: number[]) {
-    return of(tf.oneHot(tf.tensor1d(labels, "int32"), NUM_OUTPUT_CLASSES));
+    return of(tf.oneHot(tf.tensor1d(labels, 'int32'), NUM_OUTPUT_CLASSES));
   }
 
   private getImageTensorsObservable(imageUrls: string[] = []) {
@@ -130,12 +130,12 @@ export class AppComponent implements AfterViewInit {
 
             this.processedImages$.next(
               concat(this.processedImages$.getValue(), [
-                _processedImage.getBase64Async("image/png")
+                _processedImage.getBase64Async('image/png')
               ])
             );
 
             return _processedImage.getImageDataAsObservable(
-              "image/png",
+              'image/png',
               TARGET_SHAPE_WIDTH,
               TARGET_SHAPE_HEIGHT
             );
@@ -162,8 +162,8 @@ export class AppComponent implements AfterViewInit {
         kernelSize: 5,
         filters: 8,
         strides: 3,
-        activation: "relu",
-        kernelInitializer: "randomUniform" // "varianceScaling"
+        activation: 'relu',
+        kernelInitializer: 'randomUniform' // "varianceScaling"
       })
     );
     model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [2, 2] }));
@@ -174,8 +174,8 @@ export class AppComponent implements AfterViewInit {
         kernelSize: 5,
         filters: 8,
         strides: 3,
-        activation: "relu",
-        kernelInitializer: "randomNormal"
+        activation: 'relu',
+        kernelInitializer: 'randomNormal'
       })
     );
     model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [2, 2] }));
@@ -185,33 +185,33 @@ export class AppComponent implements AfterViewInit {
     model.add(
       tf.layers.dense({
         units: NUM_OUTPUT_CLASSES * NUM_OUTPUT_CLASSES * NUM_OUTPUT_CLASSES,
-        kernelInitializer: "randomNormal",
+        kernelInitializer: 'randomNormal',
         useBias: true,
-        activation: "relu"
+        activation: 'relu'
       })
     );
     model.add(
       tf.layers.dense({
         units: NUM_OUTPUT_CLASSES * NUM_OUTPUT_CLASSES,
-        kernelInitializer: "randomNormal",
+        kernelInitializer: 'randomNormal',
         useBias: true,
-        activation: "relu"
+        activation: 'relu'
       })
     );
     model.add(
       tf.layers.dense({
         units: NUM_OUTPUT_CLASSES,
-        kernelInitializer: "randomNormal",
+        kernelInitializer: 'randomNormal',
         useBias: true,
-        activation: "softmax"
+        activation: 'softmax'
       })
     );
 
     // Compile Model
     model.compile({
       optimizer: tf.train.adam(0.01),
-      loss: "categoricalCrossentropy",
-      metrics: ["accuracy"]
+      loss: 'categoricalCrossentropy',
+      metrics: ['accuracy']
     });
     // tfvis.show.modelSummary(container, model);
 
@@ -222,20 +222,20 @@ export class AppComponent implements AfterViewInit {
     return forkJoin([
       this.getCNNModelObservable(),
       this.getImageTensorsObservable([
-        "http://localhost:4200/api/atlas/yellow-sample.png",
-        "http://localhost:4200/api/atlas/red-sample.png",
-        "http://localhost:4200/api/atlas/green-sample.png"
+        'http://localhost:4200/api/atlas/yellow-sample.png',
+        'http://localhost:4200/api/atlas/red-sample.png',
+        'http://localhost:4200/api/atlas/green-sample.png'
       ]),
       this.getLabelTensorsObservable([0, 1, 2])
     ]).pipe(
       rxFlatMap(([model, imageTensors, labelTensors]) => {
-        console.log("TFJS:", tf.getBackend());
+        console.log('TFJS:', tf.getBackend());
         labelTensors.data().then(oneHotDataBuffer => {
           console.log({ oneHotData: Array.from(oneHotDataBuffer) });
         });
         const tensorFeatures = tf.stack(imageTensors);
 
-        const metrics = ["loss", "val_loss", "acc", "val_acc"];
+        const metrics = ['loss', 'val_loss', 'acc', 'val_acc'];
 
         const fitCallbacks = tfvis.show.fitCallbacks(container, metrics);
 
