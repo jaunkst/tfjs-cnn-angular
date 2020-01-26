@@ -6,7 +6,7 @@
   font-family: sans-serif;
   min-width: 300px;
   max-width: 600px;
-  margin: 50px auto;
+  margin: 50px 20px;
 }
 
 .gutter-left {
@@ -130,4 +130,43 @@ summary {
   height: 16px;
   width: 16px;
   margin-right: 4px;
+}
+
+.validation-images {
+  justify-content: flex-start;
+  h2 {
+    text-align: left;
+  }
+
+  ul {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0;
+    padding: 0;
+  }
+  ul li {
+    padding: 10px 0;
+    display: flex;
+    flex: 1 0 100%;
+    justify-content: flex-start;
+  }
+  ul li span {
+    display: block;
+  }
+  ul li strong {
+    margin: 10px;
+  }
+}
+
+.processed-images {
+  justify-content: flex-start;
+  h2 {
+    text-align: left;
+  }
+
+  ul {
+    display: flex;
+    padding: 0;
+    list-style: none;
+  }
 }

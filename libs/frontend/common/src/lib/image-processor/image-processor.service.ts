@@ -1,10 +1,16 @@
-import { Injectable } from '@angular/core';
-import * as Jimp from 'jimp';
-import { from, Observable } from 'rxjs';
-import { map as rxMap, flatMap as rxFlatMap } from 'rxjs/operators';
+import { Injectable } from "@angular/core";
+import * as Jimp from "jimp";
+import { from, Observable } from "rxjs";
+import { map as rxMap, flatMap as rxFlatMap } from "rxjs/operators";
+
+export interface RxJimp extends Jimp {
+  getBase64AsObservable: Function;
+  getBufferAsObservable: Function;
+  getImageDataAsObservable: Function;
+}
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: "root"
 })
 export class ImageProcessorService {
   constructor() {}
@@ -27,10 +33,10 @@ export class ImageProcessorService {
           return from(image.getBase64AsObservable(mime)).pipe(
             rxFlatMap((base64: string) => {
               return new Observable(sub => {
-                const canvas = document.createElement('canvas');
+                const canvas = document.createElement("canvas");
                 canvas.width = width;
                 canvas.height = height;
-                const ctx = canvas.getContext('2d');
+                const ctx = canvas.getContext("2d");
                 const img = new Image();
                 img.onload = function() {
                   ctx.drawImage(img, 0, 0);
