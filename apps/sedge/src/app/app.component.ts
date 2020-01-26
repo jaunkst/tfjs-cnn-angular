@@ -64,18 +64,42 @@ export class AppComponent implements AfterViewInit {
     {
       src: 'http://localhost:4200/api/atlas/yellow-sample.png',
       predictedLabel: '',
+      predictedLabelIndex: -1,
       expectedLabelIndex: 0,
       confidence: 0
     },
     {
       src: 'http://localhost:4200/api/atlas/red-sample.png',
       predictedLabel: '',
+      predictedLabelIndex: -1,
       expectedLabelIndex: 1,
       confidence: 0
     },
     {
       src: 'http://localhost:4200/api/atlas/green-sample.png',
       predictedLabel: '',
+      predictedLabelIndex: -1,
+      expectedLabelIndex: 2,
+      confidence: 0
+    },
+    {
+      src: 'http://localhost:4200/api/atlas/yellow-ish-circle-sample.png',
+      predictedLabel: '',
+      predictedLabelIndex: -1,
+      expectedLabelIndex: 0,
+      confidence: 0
+    },
+    {
+      src: 'http://localhost:4200/api/atlas/strawberries.png',
+      predictedLabel: '',
+      predictedLabelIndex: -1,
+      expectedLabelIndex: 1,
+      confidence: 0
+    },
+    {
+      src: 'http://localhost:4200/api/atlas/green-circle.png',
+      predictedLabel: '',
+      predictedLabelIndex: -1,
       expectedLabelIndex: 2,
       confidence: 0
     }
@@ -299,11 +323,13 @@ export class AppComponent implements AfterViewInit {
           const updatedValidationImages: any = map(
             ({ validationImage, prediction }) => {
               const confidence = reduce(max, 0, prediction as any[]);
+              const predictedLabelIndex = this.indexOfMax(prediction);
+
               return {
                 ...validationImage,
                 confidence,
-                predictedLabel:
-                  ORDERED_LABEL_CLASSES[this.indexOfMax(prediction)]
+                predictedLabelIndex,
+                predictedLabel: ORDERED_LABEL_CLASSES[predictedLabelIndex]
               };
             },
             validationImagePredictions

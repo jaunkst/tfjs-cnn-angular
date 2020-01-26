@@ -25,10 +25,14 @@
     <h2>Validation Images</h2>
     <ul>
       <li class="flex" *ngFor="let data of instantValidationImages$ | async">
-        <img [src]="data.src" alt="" height="100px" />
+        <img [src]="data.src" alt="" height="70px" />
         <strong>
           <span>Predicted Label: {{ data.predictedLabel }}</span>
-          <span>Confidence: {{ data.confidence }}</span>
+          <span>Confidence: {{ data.confidence | number: '1.2-2' }}</span>
+          <span
+            >Correct:
+            {{ data.expectedLabelIndex === data.predictedLabelIndex }}</span
+          >
         </strong>
       </li>
     </ul>
