@@ -244,7 +244,7 @@ export class AppComponent implements AfterViewInit {
             .fit(tensorFeatures, labelTensors, {
               batchSize: BATCH_SIZE,
               validationData: [tensorFeatures, labelTensors],
-              epochs: 50,
+              epochs: 70,
               shuffle: true,
               callbacks: fitCallbacks
             })
