@@ -3,6 +3,12 @@ import * as Jimp from 'jimp';
 import { from, Observable } from 'rxjs';
 import { map as rxMap, flatMap as rxFlatMap } from 'rxjs/operators';
 
+export interface RxJimp extends Jimp {
+  getBase64AsObservable: Function;
+  getBufferAsObservable: Function;
+  getImageDataAsObservable: Function;
+}
+
 @Injectable({
   providedIn: 'root'
 })

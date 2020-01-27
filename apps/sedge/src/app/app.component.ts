@@ -2,7 +2,7 @@ import { Component, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
 import * as tf from '@tensorflow/tfjs';
 
 import * as tfvis from '@tensorflow/tfjs-vis';
-import { ImageProcessorService } from '@sedge/frontend/common';
+import { ImageProcessorService, RxJimp } from '@sedge/frontend/common';
 
 import {
   from,
@@ -18,9 +18,10 @@ import {
   startWith as rxStartWith,
   take as rxTake,
   flatMap as rxFlatMap,
-  filter as rxFilter
+  filter as rxFilter,
+  shareReplay as rxShareReplay
 } from 'rxjs/operators';
-import { map, complement, isNil } from 'ramda';
+import { map, complement, isNil, concat, reduce, max } from 'ramda';
 import { FormGroup, FormControl, Validators } from '@angular/forms';
 import { Tensor } from '@tensorflow/tfjs';
 
@@ -32,9 +33,10 @@ const TARGET_SHAPE = [
   TARGET_SHAPE_HEIGHT,
   TARGET_SHAPE_CHANNELS
 ];
-const NUM_OUTPUT_CLASSES = 3;
+const ORDERED_LABEL_CLASSES = ['yellow', 'red', 'green'];
+const NUM_OUTPUT_CLASSES = ORDERED_LABEL_CLASSES.length;
 
-const BATCH_SIZE = 64;
+const BATCH_SIZE = 100;
 const TEST_BATCH_SIZE = 1000;
 const TEST_ITERATION_FREQUENCY = 5;
 
@@ -58,31 +60,83 @@ export class AppComponent implements AfterViewInit {
     image: new FormControl(null, [Validators.required])
   });
 
+  public instantValidationImages$ = new BehaviorSubject([
+    {
+      src: 'http://localhost:4200/api/atlas/yellow-sample.png',
+      predictedLabel: '',
+      predictedLabelIndex: -1,
+      expectedLabelIndex: 0,
+      confidence: 0
+    },
+    {
+      src: 'http://localhost:4200/api/atlas/red-sample.png',
+      predictedLabel: '',
+      predictedLabelIndex: -1,
+      expectedLabelIndex: 1,
+      confidence: 0
+    },
+    {
+      src: 'http://localhost:4200/api/atlas/green-sample.png',
+      predictedLabel: '',
+      predictedLabelIndex: -1,
+      expectedLabelIndex: 2,
+      confidence: 0
+    },
+    {
+      src: 'http://localhost:4200/api/atlas/yellow-ish-circle-sample.png',
+      predictedLabel: '',
+      predictedLabelIndex: -1,
+      expectedLabelIndex: 0,
+      confidence: 0
+    },
+    {
+      src: 'http://localhost:4200/api/atlas/strawberries.png',
+      predictedLabel: '',
+      predictedLabelIndex: -1,
+      expectedLabelIndex: 1,
+      confidence: 0
+    },
+    {
+      src: 'http://localhost:4200/api/atlas/green-circle.png',
+      predictedLabel: '',
+      predictedLabelIndex: -1,
+      expectedLabelIndex: 2,
+      confidence: 0
+    }
+  ]);
+
+  public processedImages$ = new BehaviorSubject([]);
+
+  public trainedModel$: Observable<any>;
+
   public testImageBlobUrl$ = new BehaviorSubject(null);
   public testImageTensors$ = this.testImageBlobUrl$.pipe(
     rxFilter(complement(isNil)),
     rxFlatMap((blobUrl: string) => {
-      return this.imageProcessorService.read(blobUrl).pipe(
-        rxFlatMap((image: any) => {
-          return image
-            .normalize()
-            .resize(TARGET_SHAPE_WIDTH, TARGET_SHAPE_HEIGHT)
-            .getImageDataAsObservable(
-              'image/png',
-              TARGET_SHAPE_WIDTH,
-              TARGET_SHAPE_HEIGHT
-            );
-        }),
-        rxMap((imageData: ImageData) => {
-          return tf.stack([
-            tf.browser.fromPixels(imageData, TARGET_SHAPE_CHANNELS)
-          ]);
-        })
-      );
+      return this.blobURLToTensor(blobUrl);
     })
   );
 
   constructor(public imageProcessorService: ImageProcessorService) {}
+
+  private blobURLToTensor(blobUrl: string) {
+    return this.imageProcessorService.read(blobUrl).pipe(
+      rxFlatMap((image: RxJimp) => {
+        return image
+          .resize(TARGET_SHAPE_WIDTH, TARGET_SHAPE_HEIGHT)
+          .getImageDataAsObservable(
+            'image/png',
+            TARGET_SHAPE_WIDTH,
+            TARGET_SHAPE_HEIGHT
+          );
+      }),
+      rxMap((imageData: ImageData) => {
+        return tf.stack([
+          tf.browser.fromPixels(imageData, TARGET_SHAPE_CHANNELS)
+        ]);
+      })
+    );
+  }
 
   private getLabelTensorsObservable(labels: number[]) {
     return of(tf.oneHot(tf.tensor1d(labels, 'int32'), NUM_OUTPUT_CLASSES));
@@ -93,14 +147,22 @@ export class AppComponent implements AfterViewInit {
       rxFlatMap(images => {
         return forkJoin(
           map((image: any) => {
-            return image
-              .normalize()
-              .resize(TARGET_SHAPE_WIDTH, TARGET_SHAPE_HEIGHT)
-              .getImageDataAsObservable(
-                'image/png',
-                TARGET_SHAPE_WIDTH,
-                TARGET_SHAPE_HEIGHT
-              );
+            const _processedImage = image.resize(
+              TARGET_SHAPE_WIDTH,
+              TARGET_SHAPE_HEIGHT
+            );
+
+            this.processedImages$.next(
+              concat(this.processedImages$.getValue(), [
+                _processedImage.getBase64Async('image/png')
+              ])
+            );
+
+            return _processedImage.getImageDataAsObservable(
+              'image/png',
+              TARGET_SHAPE_WIDTH,
+              TARGET_SHAPE_HEIGHT
+            );
           }, images)
         );
       }),
@@ -123,21 +185,21 @@ export class AppComponent implements AfterViewInit {
         inputShape: TARGET_SHAPE,
         kernelSize: 5,
         filters: 8,
-        strides: 1,
+        strides: 3,
         activation: 'relu',
-        kernelInitializer: 'varianceScaling'
+        kernelInitializer: 'randomUniform' // "varianceScaling"
       })
     );
     model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [2, 2] }));
 
-    // Second layer
+    /* Second layer */
     model.add(
       tf.layers.conv2d({
         kernelSize: 5,
-        filters: 16,
-        strides: 1,
+        filters: 8,
+        strides: 3,
         activation: 'relu',
-        kernelInitializer: 'varianceScaling'
+        kernelInitializer: 'randomNormal'
       })
     );
     model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [2, 2] }));
@@ -146,15 +208,32 @@ export class AppComponent implements AfterViewInit {
     model.add(tf.layers.flatten());
     model.add(
       tf.layers.dense({
+        units: NUM_OUTPUT_CLASSES * NUM_OUTPUT_CLASSES * NUM_OUTPUT_CLASSES,
+        kernelInitializer: 'randomNormal',
+        useBias: true,
+        activation: 'relu'
+      })
+    );
+    model.add(
+      tf.layers.dense({
+        units: NUM_OUTPUT_CLASSES * NUM_OUTPUT_CLASSES,
+        kernelInitializer: 'randomNormal',
+        useBias: true,
+        activation: 'relu'
+      })
+    );
+    model.add(
+      tf.layers.dense({
         units: NUM_OUTPUT_CLASSES,
-        kernelInitializer: 'varianceScaling',
+        kernelInitializer: 'randomNormal',
+        useBias: true,
         activation: 'softmax'
       })
     );
 
     // Compile Model
     model.compile({
-      optimizer: tf.train.adam(0.4),
+      optimizer: tf.train.adam(0.01),
       loss: 'categoricalCrossentropy',
       metrics: ['accuracy']
     });
@@ -175,6 +254,9 @@ export class AppComponent implements AfterViewInit {
     ]).pipe(
       rxFlatMap(([model, imageTensors, labelTensors]) => {
         console.log('TFJS:', tf.getBackend());
+        labelTensors.data().then(oneHotDataBuffer => {
+          console.log({ oneHotData: Array.from(oneHotDataBuffer) });
+        });
         const tensorFeatures = tf.stack(imageTensors);
 
         const metrics = ['loss', 'val_loss', 'acc', 'val_acc'];
@@ -186,7 +268,7 @@ export class AppComponent implements AfterViewInit {
             .fit(tensorFeatures, labelTensors, {
               batchSize: BATCH_SIZE,
               validationData: [tensorFeatures, labelTensors],
-              epochs: 2,
+              epochs: 70,
               shuffle: true,
               callbacks: fitCallbacks
             })
@@ -207,11 +289,64 @@ export class AppComponent implements AfterViewInit {
   }
 
   ngAfterViewInit() {
-    combineLatest([this.testImageTensors$, this.getTrainedModelObservable()])
+    this.trainedModel$ = this.getTrainedModelObservable().pipe(
+      rxShareReplay(1)
+    );
+
+    this.trainedModel$.subscribe(model => {
+      this.instantValidationImages$
+        .pipe(
+          rxTake(1),
+          rxFlatMap(validationImageList => {
+            console.log({ validationImageList });
+            return forkJoin(
+              map(validationImage => {
+                return this.blobURLToTensor(validationImage.src).pipe(
+                  rxFlatMap(imageTensor => {
+                    return from(model.predict(imageTensor).data());
+                  }),
+                  rxMap(prediction => {
+                    return {
+                      validationImage,
+                      prediction
+                    };
+                  }),
+                  rxTake(1)
+                );
+              }, validationImageList)
+            );
+          })
+        )
+        .subscribe(validationImagePredictions => {
+          console.log({ validationImagePredictions });
+
+          const updatedValidationImages: any = map(
+            ({ validationImage, prediction }) => {
+              const confidence = reduce(max, 0, prediction as any[]);
+              const predictedLabelIndex = this.indexOfMax(prediction);
+
+              return {
+                ...validationImage,
+                confidence,
+                predictedLabelIndex,
+                predictedLabel: ORDERED_LABEL_CLASSES[predictedLabelIndex]
+              };
+            },
+            validationImagePredictions
+          );
+
+          console.log({ updatedValidationImages });
+
+          this.instantValidationImages$.next(updatedValidationImages);
+        });
+    });
+
+    combineLatest([this.testImageTensors$, this.trainedModel$])
       .pipe(
         rxFlatMap(([testImageTensors, model]) => {
           const results = model.predict(testImageTensors) as Tensor;
           tfvis.show.valuesDistribution(container, results);
+
           return from(results.data());
         })
       )
@@ -224,7 +359,7 @@ export class AppComponent implements AfterViewInit {
         //   console.log(JSON.stringify(result, null, 2));
         // });
 
-        const labelValues = ['yellow', 'red', 'green'];
+        const labelValues = ORDERED_LABEL_CLASSES;
         this.prediction$.next(labelValues[this.indexOfMax(prediction)]);
       });
   }

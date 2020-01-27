@@ -11,4 +11,30 @@
       />
     </label>
   </form>
+
+  <div class="processed-images">
+    <h2>Processed Images</h2>
+    <ul>
+      <li *ngFor="let processedImage of processedImages$ | async">
+        <img [src]="processedImage | async" alt="" />
+      </li>
+    </ul>
+  </div>
+
+  <div class="validation-images">
+    <h2>Validation Images</h2>
+    <ul>
+      <li class="flex" *ngFor="let data of instantValidationImages$ | async">
+        <img [src]="data.src" alt="" height="70px" />
+        <strong>
+          <span>Predicted Label: {{ data.predictedLabel }}</span>
+          <span>Confidence: {{ data.confidence | number: '1.2-2' }}</span>
+          <span
+            >Correct:
+            {{ data.expectedLabelIndex === data.predictedLabelIndex }}</span
+          >
+        </strong>
+      </li>
+    </ul>
+  </div>
 </div>
